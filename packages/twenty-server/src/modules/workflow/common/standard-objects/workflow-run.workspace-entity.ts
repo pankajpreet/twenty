@@ -1,15 +1,19 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 import { msg } from '@lingui/core/macro';
-import { FieldMetadataType, RelationOnDeleteAction } from 'twenty-shared/types';
+import { STANDARD_OBJECT_IDS } from 'twenty-shared/metadata';
+import {
+  ActorMetadata,
+  FieldMetadataType,
+  RelationOnDeleteAction,
+} from 'twenty-shared/types';
 import { type WorkflowRunStepInfos } from 'twenty-shared/workflow';
 
 import { RelationType } from 'src/engine/metadata-modules/field-metadata/interfaces/relation-type.interface';
 import { Relation } from 'src/engine/workspace-manager/workspace-sync-metadata/interfaces/relation.interface';
 
-import { SEARCH_VECTOR_FIELD } from 'src/engine/metadata-modules/constants/search-vector-field.constants';
-import { ActorMetadata } from 'src/engine/metadata-modules/field-metadata/composite-types/actor.composite-type';
 import { IndexType } from 'src/engine/metadata-modules/index-metadata/types/indexType.types';
+import { SEARCH_VECTOR_FIELD } from 'src/engine/metadata-modules/search-field-metadata/constants/search-vector-field.constants';
 import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
 import { WorkspaceEntity } from 'src/engine/twenty-orm/decorators/workspace-entity.decorator';
 import { WorkspaceFieldIndex } from 'src/engine/twenty-orm/decorators/workspace-field-index.decorator';
@@ -22,7 +26,6 @@ import { WorkspaceJoinColumn } from 'src/engine/twenty-orm/decorators/workspace-
 import { WorkspaceRelation } from 'src/engine/twenty-orm/decorators/workspace-relation.decorator';
 import { WORKFLOW_RUN_STANDARD_FIELD_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-field-ids';
 import { STANDARD_OBJECT_ICONS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-icons';
-import { STANDARD_OBJECT_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-ids';
 import {
   type FieldTypeAndNameMetadata,
   getTsVectorColumnExpressionFromFields,
@@ -81,6 +84,7 @@ export const SEARCH_FIELDS_FOR_WORKFLOW_RUNS: FieldTypeAndNameMetadata[] = [
 
 @WorkspaceEntity({
   standardId: STANDARD_OBJECT_IDS.workflowRun,
+
   namePlural: 'workflowRuns',
   labelSingular: msg`Workflow Run`,
   labelPlural: msg`Workflow Runs`,
@@ -88,6 +92,7 @@ export const SEARCH_FIELDS_FOR_WORKFLOW_RUNS: FieldTypeAndNameMetadata[] = [
   labelIdentifierStandardId: WORKFLOW_RUN_STANDARD_FIELD_IDS.name,
   icon: STANDARD_OBJECT_ICONS.workflowRun,
 })
+@WorkspaceIsSystem()
 @WorkspaceIsNotAuditLogged()
 @WorkspaceIsObjectUIReadOnly()
 export class WorkflowRunWorkspaceEntity extends BaseWorkspaceEntity {
@@ -98,7 +103,8 @@ export class WorkflowRunWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Name of the workflow run`,
     icon: 'IconSettingsAutomation',
   })
-  name: string;
+  @WorkspaceIsNullable()
+  name: string | null;
 
   @WorkspaceField({
     standardId: WORKFLOW_RUN_STANDARD_FIELD_IDS.enqueuedAt,
@@ -278,6 +284,7 @@ export class WorkflowRunWorkspaceEntity extends BaseWorkspaceEntity {
     label: msg`Timeline Activities`,
     description: msg`Timeline activities linked to the run`,
     inverseSideTarget: () => TimelineActivityWorkspaceEntity,
+    inverseSideFieldKey: 'targetWorkflowRun',
     onDelete: RelationOnDeleteAction.CASCADE,
   })
   @WorkspaceIsSystem()

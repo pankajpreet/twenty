@@ -1,9 +1,11 @@
 import { SelectableListItem } from '@/ui/layout/selectable-list/components/SelectableListItem';
 import { useTheme } from '@emotion/react';
 import styled from '@emotion/styled';
+import { t } from '@lingui/core/macro';
 import { ColorSample } from 'twenty-ui/display';
 import { MenuItemSelect } from 'twenty-ui/navigation';
 import { type ThemeColor } from 'twenty-ui/theme';
+import { getMainColorNameFromPaletteColorName } from 'twenty-ui/utilities';
 
 type ChartColorPaletteOptionProps = {
   selectedItemId: string | null;
@@ -36,7 +38,13 @@ export const ChartColorPaletteOption = ({
     <StyledColorSamplesContainer>
       {paletteColors.map((paletteColorName) => {
         const baseColor = theme.color[paletteColorName] as string;
-        return <ColorSample key={paletteColorName} color={baseColor} />;
+        return (
+          <ColorSample
+            key={paletteColorName}
+            colorName={getMainColorNameFromPaletteColorName(paletteColorName)}
+            color={baseColor}
+          />
+        );
       })}
     </StyledColorSamplesContainer>
   );
@@ -50,7 +58,7 @@ export const ChartColorPaletteOption = ({
       }}
     >
       <MenuItemSelect
-        text={'Palette'}
+        text={t`Palette`}
         selected={false}
         focused={selectedItemId === 'auto' || currentColor === 'auto'}
         contextualText={colorSamples}

@@ -1,5 +1,6 @@
 import { useTheme } from '@emotion/react';
 import styled from '@emotion/styled';
+import { t } from '@lingui/core/macro';
 
 import { ActivityTargetsInlineCell } from '@/activities/inline-cell/components/ActivityTargetsInlineCell';
 import { getActivitySummary } from '@/activities/utils/getActivitySummary';
@@ -58,6 +59,11 @@ const StyledRightSideContainer = styled.div`
   max-width: 50%;
 `;
 
+const StyledActivityTargetsContainer = styled.div`
+  overflow: clip;
+  width: 100%;
+`;
+
 const StyledPlaceholder = styled.div`
   color: ${({ theme }) => theme.font.color.light};
 `;
@@ -109,7 +115,7 @@ export const TaskRow = ({ task }: { task: Task }) => {
           />
         </StyledCheckboxContainer>
         <StyledTaskTitle completed={task.status === 'DONE'}>
-          {task.title || <StyledPlaceholder>Task title</StyledPlaceholder>}
+          {task.title || <StyledPlaceholder>{t`Task title`}</StyledPlaceholder>}
         </StyledTaskTitle>
         <StyledTaskBody>
           <OverflowingTextWithTooltip text={body} />
@@ -125,22 +131,24 @@ export const TaskRow = ({ task }: { task: Task }) => {
           </StyledDueDate>
         )}
         {
-          <FieldContextProvider
-            objectNameSingular={CoreObjectNameSingular.Task}
-            objectRecordId={task.id}
-            fieldMetadataName="taskTargets"
-            fieldPosition={0}
-          >
-            <StopPropagationContainer>
-              <ActivityTargetsInlineCell
-                activityObjectNameSingular={CoreObjectNameSingular.Task}
-                activityRecordId={task.id}
-                showLabel={false}
-                maxWidth={200}
-                componentInstanceId={componentInstanceId}
-              />
-            </StopPropagationContainer>
-          </FieldContextProvider>
+          <StyledActivityTargetsContainer>
+            <FieldContextProvider
+              objectNameSingular={CoreObjectNameSingular.Task}
+              objectRecordId={task.id}
+              fieldMetadataName="taskTargets"
+              fieldPosition={0}
+            >
+              <StopPropagationContainer>
+                <ActivityTargetsInlineCell
+                  activityObjectNameSingular={CoreObjectNameSingular.Task}
+                  activityRecordId={task.id}
+                  showLabel={false}
+                  maxWidth={200}
+                  componentInstanceId={componentInstanceId}
+                />
+              </StopPropagationContainer>
+            </FieldContextProvider>
+          </StyledActivityTargetsContainer>
         }
       </StyledRightSideContainer>
     </ActivityRow>

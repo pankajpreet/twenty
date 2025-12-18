@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { ApplicationModule } from 'src/engine/core-modules/application/application.module';
 import { I18nModule } from 'src/engine/core-modules/i18n/i18n.module';
+import { WorkspaceManyOrAllFlatEntityMapsCacheModule } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.module';
 import { PermissionsModule } from 'src/engine/metadata-modules/permissions/permissions.module';
 import { ViewFieldEntity } from 'src/engine/metadata-modules/view-field/entities/view-field.entity';
 import { ViewFilterGroupEntity } from 'src/engine/metadata-modules/view-filter-group/entities/view-filter-group.entity';
@@ -11,6 +13,7 @@ import { CreateViewFieldPermissionGuard } from 'src/engine/metadata-modules/view
 import { CreateViewFilterGroupPermissionGuard } from 'src/engine/metadata-modules/view-permissions/guards/create-view-filter-group-permission.guard';
 import { CreateViewFilterPermissionGuard } from 'src/engine/metadata-modules/view-permissions/guards/create-view-filter-permission.guard';
 import { CreateViewGroupPermissionGuard } from 'src/engine/metadata-modules/view-permissions/guards/create-view-group-permission.guard';
+import { CreateViewPermissionGuard } from 'src/engine/metadata-modules/view-permissions/guards/create-view-permission.guard';
 import { CreateViewSortPermissionGuard } from 'src/engine/metadata-modules/view-permissions/guards/create-view-sort-permission.guard';
 import { DeleteViewFieldPermissionGuard } from 'src/engine/metadata-modules/view-permissions/guards/delete-view-field-permission.guard';
 import { DeleteViewFilterGroupPermissionGuard } from 'src/engine/metadata-modules/view-permissions/guards/delete-view-filter-group-permission.guard';
@@ -36,6 +39,7 @@ import { ViewSortEntity } from 'src/engine/metadata-modules/view-sort/entities/v
 import { ViewEntity } from 'src/engine/metadata-modules/view/entities/view.entity';
 import { ViewService } from 'src/engine/metadata-modules/view/services/view.service';
 import { WorkspaceCacheStorageModule } from 'src/engine/workspace-cache-storage/workspace-cache-storage.module';
+import { WorkspaceMigrationV2Module } from 'src/engine/workspace-manager/workspace-migration-v2/workspace-migration-v2.module';
 
 @Module({
   imports: [
@@ -47,14 +51,18 @@ import { WorkspaceCacheStorageModule } from 'src/engine/workspace-cache-storage/
       ViewGroupEntity,
       ViewSortEntity,
     ]),
+    ApplicationModule,
     I18nModule,
     PermissionsModule,
     WorkspaceCacheStorageModule,
+    WorkspaceManyOrAllFlatEntityMapsCacheModule,
+    WorkspaceMigrationV2Module,
   ],
   providers: [
     ViewService,
     ViewEntityLookupService,
     ViewAccessService,
+    CreateViewPermissionGuard,
     UpdateViewPermissionGuard,
     DeleteViewPermissionGuard,
     DestroyViewPermissionGuard,
@@ -83,6 +91,7 @@ import { WorkspaceCacheStorageModule } from 'src/engine/workspace-cache-storage/
     ViewService,
     ViewEntityLookupService,
     ViewAccessService,
+    CreateViewPermissionGuard,
     UpdateViewPermissionGuard,
     DeleteViewPermissionGuard,
     DestroyViewPermissionGuard,

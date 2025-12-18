@@ -91,7 +91,6 @@ export const SettingsApplicationDetailEnvironmentVariablesTableRow = ({
         <LightIconButton
           accent="tertiary"
           Icon={IconCheck}
-          disabled={editedEnvVariable.value === ''}
           onClick={() => {
             onChange(editedEnvVariable);
             setEditMode(false);
@@ -116,7 +115,7 @@ export const SettingsApplicationDetailEnvironmentVariablesTableRow = ({
             dropdownId={dropDownId}
             clickableComponent={
               <LightIconButton
-                aria-label="Env Variable Options"
+                aria-label={t`Env Variable Options`}
                 Icon={IconDotsVertical}
                 accent="tertiary"
               />

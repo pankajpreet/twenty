@@ -8,7 +8,7 @@ const isString = (value: any): value is string => {
   return typeof value === 'string';
 };
 
-const VARIABLE_PATTERN = RegExp('\\{\\{(.*?)\\}\\}', 'g');
+const VARIABLE_PATTERN = RegExp('\\{\\{([^{}]+)\\}\\}', 'g');
 
 export const resolveInput = (
   unresolvedInput: unknown,
@@ -99,7 +99,7 @@ const evalFromContext = (input: string, context: Record<string, unknown>) => {
       },
     });
 
-    return JSON.parse(inferredInput) ?? '';
+    return JSON.parse(inferredInput);
   } catch {
     return undefined;
   }

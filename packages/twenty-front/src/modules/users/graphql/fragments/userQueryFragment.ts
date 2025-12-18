@@ -60,7 +60,9 @@ export const USER_QUERY_FRAGMENT = gql`
       isPasswordAuthBypassEnabled
       subdomain
       hasValidEnterpriseKey
-      customDomain
+      workspaceCustomApplication {
+        id
+      }
       isCustomDomainEnabled
       workspaceUrls {
         ...WorkspaceUrlsFragment
@@ -80,9 +82,11 @@ export const USER_QUERY_FRAGMENT = gql`
       defaultRole {
         ...RoleFragment
       }
-      routerModel
+      fastModel
+      smartModel
       isTwoFactorAuthenticationEnforced
       trashRetentionDays
+      editableProfileFields
     }
     availableWorkspaces {
       ...AvailableWorkspacesFragment

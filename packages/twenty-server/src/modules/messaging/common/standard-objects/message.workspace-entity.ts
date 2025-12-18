@@ -1,4 +1,5 @@
 import { msg } from '@lingui/core/macro';
+import { STANDARD_OBJECT_IDS } from 'twenty-shared/metadata';
 import { FieldMetadataType, RelationOnDeleteAction } from 'twenty-shared/types';
 
 import { RelationType } from 'src/engine/metadata-modules/field-metadata/interfaces/relation-type.interface';
@@ -14,13 +15,13 @@ import { WorkspaceJoinColumn } from 'src/engine/twenty-orm/decorators/workspace-
 import { WorkspaceRelation } from 'src/engine/twenty-orm/decorators/workspace-relation.decorator';
 import { MESSAGE_STANDARD_FIELD_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-field-ids';
 import { STANDARD_OBJECT_ICONS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-icons';
-import { STANDARD_OBJECT_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-ids';
 import { MessageChannelMessageAssociationWorkspaceEntity } from 'src/modules/messaging/common/standard-objects/message-channel-message-association.workspace-entity';
 import { MessageParticipantWorkspaceEntity } from 'src/modules/messaging/common/standard-objects/message-participant.workspace-entity';
 import { MessageThreadWorkspaceEntity } from 'src/modules/messaging/common/standard-objects/message-thread.workspace-entity';
 
 @WorkspaceEntity({
   standardId: STANDARD_OBJECT_IDS.message,
+
   namePlural: 'messages',
   labelSingular: msg`Message`,
   labelPlural: msg`Messages`,
@@ -38,7 +39,8 @@ export class MessageWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Message id from the message header`,
     icon: 'IconHash',
   })
-  headerMessageId: string;
+  @WorkspaceIsNullable()
+  headerMessageId: string | null;
 
   @WorkspaceField({
     standardId: MESSAGE_STANDARD_FIELD_IDS.subject,
@@ -47,7 +49,8 @@ export class MessageWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Subject`,
     icon: 'IconMessage',
   })
-  subject: string;
+  @WorkspaceIsNullable()
+  subject: string | null;
 
   @WorkspaceField({
     standardId: MESSAGE_STANDARD_FIELD_IDS.text,
@@ -56,7 +59,8 @@ export class MessageWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Text`,
     icon: 'IconMessage',
   })
-  text: string;
+  @WorkspaceIsNullable()
+  text: string | null;
 
   @WorkspaceField({
     standardId: MESSAGE_STANDARD_FIELD_IDS.receivedAt,

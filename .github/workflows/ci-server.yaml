@@ -126,13 +126,13 @@ jobs:
           npx nx run twenty-front:graphql:generate
           npx nx run twenty-front:graphql:generate --configuration=metadata
 
-          # Check if any files were modified
-          if ! git diff --quiet; then
+          # Check if GraphQL generated files were modified
+          if ! git diff --quiet -- packages/twenty-front/src/generated packages/twenty-front/src/generated-metadata; then
             echo "::error::GraphQL schema changes detected. Please run 'npx nx run twenty-front:graphql:generate' and 'npx nx run twenty-front:graphql:generate --configuration=metadata' and commit the changes."
             echo ""
             echo "The following GraphQL schema changes were detected:"
             echo "==================================================="
-            git diff
+            git diff -- packages/twenty-front/src/generated packages/twenty-front/src/generated-metadata
             echo "==================================================="
             echo ""
             echo "Please run 'npx nx run twenty-front:graphql:generate' and 'npx nx run twenty-front:graphql:generate --configuration=metadata' and commit the changes."
@@ -171,7 +171,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5]
+        shard: [1, 2, 3, 4, 5, 6]
     services:
       postgres:
         image: twentycrm/twenty-postgres-spilo
@@ -209,7 +209,7 @@ jobs:
       ANALYTICS_ENABLED: true
       CLICKHOUSE_URL: "http://default:clickhousePassword@localhost:8123/twenty"
       CLICKHOUSE_PASSWORD: clickhousePassword
-      SHARD_COUNTER: 5
+      SHARD_COUNTER: 6
     steps:
       - name: Fetch custom Github Actions and base branch history
         uses: actions/checkout@v4

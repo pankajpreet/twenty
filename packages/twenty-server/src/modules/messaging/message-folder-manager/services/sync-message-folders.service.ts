@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
+import { isNonEmptyString } from '@sniptt/guards';
+import deepEqual from 'deep-equal';
 import { ConnectedAccountProvider } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { v4 } from 'uuid';
@@ -7,19 +9,25 @@ import { v4 } from 'uuid';
 import { MessageFolder } from 'src/modules/messaging/message-folder-manager/interfaces/message-folder-driver.interface';
 
 import { type WorkspaceEntityManager } from 'src/engine/twenty-orm/entity-manager/workspace-entity-manager';
+import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
 import { WorkspaceRepository } from 'src/engine/twenty-orm/repository/workspace.repository';
-import { TwentyORMGlobalManager } from 'src/engine/twenty-orm/twenty-orm-global.manager';
+import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { type MessageChannelWorkspaceEntity } from 'src/modules/messaging/common/standard-objects/message-channel.workspace-entity';
-import { type MessageFolderWorkspaceEntity } from 'src/modules/messaging/common/standard-objects/message-folder.workspace-entity';
-import { GmailGetAllFoldersService } from 'src/modules/messaging/message-folder-manager/drivers/gmail/gmail-get-all-folders.service';
-import { ImapGetAllFoldersService } from 'src/modules/messaging/message-folder-manager/drivers/imap/imap-get-all-folders.service';
-import { MicrosoftGetAllFoldersService } from 'src/modules/messaging/message-folder-manager/drivers/microsoft/microsoft-get-all-folders.service';
+import {
+  MessageFolderPendingSyncAction,
+  type MessageFolderWorkspaceEntity,
+} from 'src/modules/messaging/common/standard-objects/message-folder.workspace-entity';
+import { GmailGetAllFoldersService } from 'src/modules/messaging/message-folder-manager/drivers/gmail/services/gmail-get-all-folders.service';
+import { ImapGetAllFoldersService } from 'src/modules/messaging/message-folder-manager/drivers/imap/services/imap-get-all-folders.service';
+import { MicrosoftGetAllFoldersService } from 'src/modules/messaging/message-folder-manager/drivers/microsoft/services/microsoft-get-all-folders.service';
 import { MessageFolderName } from 'src/modules/messaging/message-import-manager/drivers/microsoft/types/folders';
 
 type SyncMessageFoldersInput = {
   workspaceId: string;
-  messageChannelId: string;
-  connectedAccount: MessageChannelWorkspaceEntity['connectedAccount'];
+  messageChannel: Pick<
+    MessageChannelWorkspaceEntity,
+    'messageFolderImportPolicy' | 'connectedAccount' | 'id'
+  >;
   manager: WorkspaceEntityManager;
 };
 
@@ -45,23 +53,33 @@ type MessageFolderToUpdate = Partial<
 @Injectable()
 export class SyncMessageFoldersService {
   constructor(
-    private readonly twentyORMGlobalManager: TwentyORMGlobalManager,
+    private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
     private readonly gmailGetAllFoldersService: GmailGetAllFoldersService,
     private readonly microsoftGetAllFoldersService: MicrosoftGetAllFoldersService,
     private readonly imapGetAllFoldersService: ImapGetAllFoldersService,
   ) {}
 
   async syncMessageFolders(input: SyncMessageFoldersInput): Promise<void> {
-    const { workspaceId, messageChannelId, connectedAccount, manager } = input;
+    const { workspaceId, messageChannel, manager } = input;
 
-    const folders = await this.discoverAllFolders(connectedAccount);
+    const authContext = buildSystemAuthContext(workspaceId);
 
-    await this.upsertDiscoveredFolders({
-      workspaceId,
-      messageChannelId,
-      folders,
-      manager,
-    });
+    await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
+      authContext,
+      async () => {
+        const folders = await this.discoverAllFolders(
+          messageChannel.connectedAccount,
+          messageChannel,
+        );
+
+        await this.upsertDiscoveredFolders({
+          workspaceId,
+          messageChannelId: messageChannel.id,
+          folders,
+          manager,
+        });
+      },
+    );
   }
 
   private async upsertDiscoveredFolders({
@@ -76,7 +94,7 @@ export class SyncMessageFoldersService {
     manager: WorkspaceEntityManager;
   }): Promise<void> {
     const messageFolderRepository =
-      await this.twentyORMGlobalManager.getRepositoryForWorkspace<MessageFolderWorkspaceEntity>(
+      await this.globalWorkspaceOrmManager.getRepository<MessageFolderWorkspaceEntity>(
         workspaceId,
         'messageFolder',
       );
@@ -88,7 +106,7 @@ export class SyncMessageFoldersService {
 
     const inserts: MessageFolderToInsert[] = [];
     const updates: [string, MessageFolderToUpdate][] = [];
-    const deletes: string[] = [];
+    const foldersToMarkForDeletion: string[] = [];
 
     const discoveredExternalIds = new Set(
       folders
@@ -101,7 +119,7 @@ export class SyncMessageFoldersService {
         existingFolder.externalId &&
         !discoveredExternalIds.has(existingFolder.externalId)
       ) {
-        deletes.push(existingFolder.id);
+        foldersToMarkForDeletion.push(existingFolder.id);
       }
     }
 
@@ -112,15 +130,27 @@ export class SyncMessageFoldersService {
       );
 
       if (existingFolder) {
-        updates.push([
-          existingFolder.id,
-          {
-            name: folder.name,
-            externalId: folder.externalId,
-            isSentFolder: folder.isSentFolder,
-            parentFolderId: folder.parentFolderId,
-          },
-        ]);
+        const folderSyncData = {
+          name: folder.name,
+          externalId: folder.externalId,
+          isSentFolder: folder.isSentFolder,
+          parentFolderId: isNonEmptyString(folder.parentFolderId)
+            ? folder.parentFolderId
+            : null,
+        };
+
+        const existingFolderData = {
+          name: existingFolder.name,
+          externalId: existingFolder.externalId,
+          isSentFolder: existingFolder.isSentFolder,
+          parentFolderId: isNonEmptyString(existingFolder.parentFolderId)
+            ? existingFolder.parentFolderId
+            : null,
+        };
+
+        if (!deepEqual(folderSyncData, existingFolderData)) {
+          updates.push([existingFolder.id, folderSyncData]);
+        }
         continue;
       }
 
@@ -150,26 +180,41 @@ export class SyncMessageFoldersService {
       );
     }
 
-    if (deletes.length > 0) {
-      await messageFolderRepository.delete(deletes, manager);
+    if (foldersToMarkForDeletion.length > 0) {
+      await messageFolderRepository.updateMany(
+        foldersToMarkForDeletion.map((id) => ({
+          criteria: id,
+          partialEntity: {
+            pendingSyncAction: MessageFolderPendingSyncAction.FOLDER_DELETION,
+          },
+        })),
+        manager,
+      );
     }
   }
 
   async discoverAllFolders(
     connectedAccount: MessageChannelWorkspaceEntity['connectedAccount'],
+    messageChannel: Pick<
+      MessageChannelWorkspaceEntity,
+      'messageFolderImportPolicy'
+    >,
   ): Promise<MessageFolder[]> {
     switch (connectedAccount.provider) {
       case ConnectedAccountProvider.GOOGLE:
         return await this.gmailGetAllFoldersService.getAllMessageFolders(
           connectedAccount,
+          messageChannel,
         );
       case ConnectedAccountProvider.MICROSOFT:
         return await this.microsoftGetAllFoldersService.getAllMessageFolders(
           connectedAccount,
+          messageChannel,
         );
       case ConnectedAccountProvider.IMAP_SMTP_CALDAV:
         return await this.imapGetAllFoldersService.getAllMessageFolders(
           connectedAccount,
+          messageChannel,
         );
       default:
         throw new Error(
@@ -195,7 +240,7 @@ export class SyncMessageFoldersService {
       if (isDefined(existingFolder.externalId)) {
         existingFolderMap.set(existingFolder.externalId, existingFolder);
       }
-      existingFolderMap.set(existingFolder.name, existingFolder);
+      existingFolderMap.set(existingFolder.name ?? '', existingFolder);
     }
 
     return existingFolderMap;
@@ -227,6 +272,6 @@ export class SyncMessageFoldersService {
       return MessageFolderName.SENT_ITEMS;
     }
 
-    return folder.name;
+    return folder.name ?? '';
   }
 }
